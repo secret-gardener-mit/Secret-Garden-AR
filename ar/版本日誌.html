@@ -150,6 +150,19 @@
             <li>更新 <code>ar/ar-scene.js</code> 快取版本至 <code>20260615-ar5</code>。</li>
           </ul>
         </article>
+        <article>
+          <div class="version-head">
+            <h2>v0.1a1-6</h2>
+            <time datetime="2026-06-15">2026 06/15</time>
+          </div>
+          <ul>
+            <li>依排查建議，主 AR 頁暫時移除 <code>requestCameraAccess()</code> 預先相機授權呼叫，改由 MindAR 自行處理相機。</li>
+            <li>主 AR 頁暫時移除 <code>filterMinCF</code>、<code>filterBeta</code>、<code>uiLoading</code>、<code>uiScanning</code>、<code>uiError</code> 等自訂參數，回到最乾淨的 <code>MindARThree</code> 設定。</li>
+            <li>新增根目錄 <code>ar-test.html</code>，用最小 Three.js 紅色 cube 測試 <code>ar/targets.mind</code> 是否能被 MindAR 辨識。</li>
+            <li>保留必要的 <code>three/addons/</code> import map，避免 MindAR 內部載入 CSS3DRenderer 時產生 module 解析錯誤。</li>
+            <li>更新 <code>ar/ar-scene.js</code> 快取版本至 <code>20260615-ar6</code>。</li>
+          </ul>
+        </article>
       </section>
     </main>
   </body>

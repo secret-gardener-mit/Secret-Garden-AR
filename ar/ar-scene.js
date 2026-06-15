@@ -504,21 +504,14 @@ async function startAR() {
   }
 
   try {
-    setStatus(`定位圖卡已讀取（${Math.round(targetFile.size / 1024)} KB），正在請求相機權限...`);
-    await requestCameraAccess();
-    logEvent("camera permission preflight passed");
+    setStatus(`定位圖卡已讀取（${Math.round(targetFile.size / 1024)} KB），正在啟動 AR...`);
+    logEvent("camera preflight skipped; MindAR will request camera");
 
-    setStatus("相機權限已取得，正在啟動 AR...");
     logEvent("creating MindARThree");
     mindarThree = new MindARThree({
       container,
       imageTargetSrc: TARGET_SRC,
-      maxTrack: 1,
-      filterMinCF: 0.0001,
-      filterBeta: 0.001,
-      uiLoading: "no",
-      uiScanning: "no",
-      uiError: "no",
+      maxTrack: 1
     });
 
     const { renderer } = mindarThree;
