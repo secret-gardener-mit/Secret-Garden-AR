@@ -35,6 +35,8 @@ const startButton = document.querySelector("#start-ar");
 const stopButton = document.querySelector("#stop-ar");
 const statusText = document.querySelector("#ar-status");
 const scanHint = document.querySelector("#scan-hint");
+const debugLog = document.querySelector("#debug-log");
+const debugCounter = document.querySelector("#debug-counter");
 
 let mindarThree = null;
 let anchor = null;
@@ -44,6 +46,7 @@ let animationId = null;
 let scanReminderTimer = null;
 let running = false;
 let tracking = false;
+let foundCount = 0;
 
 function randomBetween(min, max) {
   return min + Math.random() * (max - min);
@@ -57,6 +60,31 @@ function setStatus(message) {
   statusText.textContent = message;
 }
 
+function logEvent(message, type = "info") {
+  const time = new Date().toLocaleTimeString("zh-TW", {
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const item = document.createElement("li");
+  item.textContent = `[${time}] ${message}`;
+  if (type === "found") {
+    item.classList.add("is-found");
+  }
+  debugLog.prepend(item);
+
+  while (debugLog.children.length > 14) {
+    debugLog.lastElementChild.remove();
+  }
+
+  console.log(`[SecretGardenAR] ${message}`);
+}
+
+function updateFoundCounter() {
+  debugCounter.textContent = `${foundCount} found`;
+}
+
 function setRunningState(nextRunning) {
   running = nextRunning;
   document.body.classList.toggle("is-running", nextRunning);
@@ -66,11 +94,16 @@ function setTrackingState(nextTracking) {
   tracking = nextTracking;
   document.body.classList.toggle("is-tracking", nextTracking);
   if (nextTracking) {
+    foundCount += 1;
+    updateFoundCounter();
     clearScanReminder();
+    logEvent(`TARGET FOUND #${foundCount} - red square should be visible`, "found");
     setStatus(TARGET_FOUND_MESSAGE);
+  } else if (running) {
+    logEvent("target lost / scanning");
   }
   scanHint.textContent = nextTracking
-    ? "已辨識圖卡。花瓣會在圖卡上方落下，花朵會從周圍慢慢長出。"
+    ? "已偵測到目標圖片。紅色方塊應出現在圖卡位置，接著花瓣與花朵會開始動畫。"
     : "請對準秘密花園圖卡。辨識成功後，花瓣會在鋼琴上方落下，花朵會從周圍慢慢長出。";
 }
 
@@ -84,6 +117,7 @@ function scheduleScanReminder() {
   clearScanReminder();
   scanReminderTimer = window.setTimeout(() => {
     if (tracking || !running) return;
+    logEvent("scan timeout: no target found event yet");
     setStatus("尚未辨識到圖卡。請讓圖卡填滿白色框線，避免反光、模糊或過斜；若是用螢幕顯示圖卡，建議改成列印紙本測試。");
   }, 6500);
 }
@@ -179,6 +213,7 @@ async function checkTargetFile() {
       };
     }
 
+    logEvent(`targets.mind loaded: ${Math.round(buffer.byteLength / 1024)} KB`);
     return { ok: true, size: buffer.byteLength };
   } catch (error) {
     return { ok: false, message: getErrorMessage(error) };
@@ -336,10 +371,44 @@ function createTargetBloomGuide() {
   return group;
 }
 
+function createDebugRedSquare() {
+  const group = new THREE.Group();
+  const square = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.48, 0.48),
+    new THREE.MeshBasicMaterial({
+      color: "#ff1f1f",
+      transparent: true,
+      opacity: 0.88,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    })
+  );
+  square.position.set(0, 0, 0.03);
+  group.add(square);
+
+  const border = new THREE.Mesh(
+    new THREE.RingGeometry(0.32, 0.36, 4),
+    new THREE.MeshBasicMaterial({
+      color: "#ffffff",
+      transparent: true,
+      opacity: 0.95,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    })
+  );
+  border.position.set(0, 0, 0.04);
+  border.rotation.z = Math.PI / 4;
+  group.add(border);
+
+  return group;
+}
+
 function buildScene() {
   anchor.group.clear();
   petals = [];
   flowers = [];
+
+  anchor.group.add(createDebugRedSquare());
 
   const content = new THREE.Group();
   content.position.z = CONTENT_Z_OFFSET;
@@ -362,6 +431,7 @@ function buildScene() {
   content.add(ambientLight);
 
   anchor.group.add(content);
+  logEvent(`scene built: ${PETAL_COUNT} petals, ${FLOWER_COUNT} flowers, red square attached`);
 }
 
 function updatePetals(time) {
@@ -409,12 +479,18 @@ async function startAR() {
   if (running) return;
 
   startButton.disabled = true;
+  foundCount = 0;
+  updateFoundCounter();
+  debugLog.replaceChildren();
+  logEvent("start button pressed");
   setStatus("正在檢查定位圖卡檔案...");
 
   try {
     ensureCameraSupport();
+    logEvent("secure context and camera API available");
   } catch (error) {
     startButton.disabled = false;
+    logEvent(getErrorMessage(error));
     setStatus(getErrorMessage(error));
     return;
   }
@@ -422,6 +498,7 @@ async function startAR() {
   const targetFile = await checkTargetFile();
   if (!targetFile.ok) {
     startButton.disabled = false;
+    logEvent(targetFile.message);
     setStatus(targetFile.message);
     return;
   }
@@ -429,8 +506,10 @@ async function startAR() {
   try {
     setStatus(`定位圖卡已讀取（${Math.round(targetFile.size / 1024)} KB），正在請求相機權限...`);
     await requestCameraAccess();
+    logEvent("camera permission preflight passed");
 
     setStatus("相機權限已取得，正在啟動 AR...");
+    logEvent("creating MindARThree");
     mindarThree = new MindARThree({
       container,
       imageTargetSrc: TARGET_SRC,
@@ -451,15 +530,18 @@ async function startAR() {
     anchor.onTargetLost = () => setTrackingState(false);
 
     buildScene();
+    logEvent("starting MindAR engine");
     await mindarThree.start();
 
     setRunningState(true);
     setTrackingState(false);
     setStatus("AR 已啟動。請對準秘密花園圖卡。");
+    logEvent("MindAR started; waiting for target found");
     scheduleScanReminder();
     animationId = requestAnimationFrame(renderLoop);
   } catch (error) {
     console.error(error);
+    logEvent(getErrorMessage(error));
     if (mindarThree) {
       try {
         await mindarThree.stop();
@@ -479,6 +561,7 @@ async function startAR() {
 }
 
 async function stopAR() {
+  logEvent("stop requested");
   if (!mindarThree) {
     setRunningState(false);
     return;
@@ -498,6 +581,7 @@ async function stopAR() {
   setRunningState(false);
   setTrackingState(false);
   setStatus("AR 已停止。可再次點擊開始。");
+  logEvent("AR stopped");
 }
 
 function warnIfInsecure() {
@@ -509,3 +593,5 @@ startButton.addEventListener("click", startAR);
 stopButton.addEventListener("click", stopAR);
 window.addEventListener("pagehide", stopAR);
 warnIfInsecure();
+updateFoundCounter();
+logEvent("page loaded");
