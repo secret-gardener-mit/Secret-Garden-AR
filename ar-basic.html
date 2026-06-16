@@ -2,15 +2,17 @@
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <script type="importmap">
-    {
-      "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
-        "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
-      }
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+      "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
     }
+  }
   </script>
+
   <style>
     html, body {
       margin: 0;
@@ -18,109 +20,82 @@
       height: 100%;
       overflow: hidden;
     }
+
     #container {
       width: 100vw;
       height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #control {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 10;
+    }
+
+    button {
+      font-size: 18px;
+      padding: 10px 14px;
     }
   </style>
 </head>
+
 <body>
+  <div id="control">
+    <button id="startButton">Start AR</button>
+    <button id="stopButton">Stop</button>
+  </div>
+
   <div id="container"></div>
+
   <script type="module">
     import * as THREE from "three";
     import { MindARThree } from "mindar-image-three";
 
-    const container = document.querySelector("#container");
-    const CAMERA_VIDEO_QUALITY = {
-      width: { ideal: 1920 },
-      height: { ideal: 1080 },
-      frameRate: { ideal: 30 }
-    };
-
-    function buildHighQualityCameraConstraints(constraints = {}) {
-      const nextConstraints = { ...constraints, audio: false };
-      const originalVideo = typeof constraints.video === "object" ? constraints.video : {};
-      const nextVideo = {
-        ...originalVideo,
-        ...CAMERA_VIDEO_QUALITY
-      };
-
-      if (!nextVideo.deviceId && !nextVideo.facingMode) {
-        nextVideo.facingMode = { ideal: "environment" };
-      }
-
-      nextConstraints.video = nextVideo;
-      return nextConstraints;
-    }
-
-    function logCameraSettings(stream, requestedConstraints) {
-      const [track] = stream.getVideoTracks();
-      const settings = track?.getSettings ? track.getSettings() : {};
-      window.SECRET_GARDEN_LAST_CAMERA_SETTINGS = settings;
-      console.log("[SecretGardenAR-Test] requested camera constraints", requestedConstraints);
-      console.log("[SecretGardenAR-Test] actual camera settings", settings);
-
-      const label = `${settings.width || "unknown"}x${settings.height || "unknown"} @ ${settings.frameRate || "unknown"}fps`;
-      const notice = document.createElement("div");
-      notice.textContent = `Camera: ${label}`;
-      notice.style.cssText = "position:fixed;left:12px;bottom:12px;z-index:9999;padding:10px 12px;background:rgba(0,0,0,.72);color:white;font:700 14px system-ui;border-radius:8px;";
-      notice.id = "camera-settings-notice";
-      document.querySelector("#camera-settings-notice")?.remove();
-      document.body.appendChild(notice);
-    }
-
-    async function startMindARWithHighQualityCamera(instance) {
-      const mediaDevices = navigator.mediaDevices;
-      const originalGetUserMedia = mediaDevices.getUserMedia.bind(mediaDevices);
-
-      mediaDevices.getUserMedia = async (constraints) => {
-        const highQualityConstraints = buildHighQualityCameraConstraints(constraints);
-        console.log("[SecretGardenAR-Test] requesting high quality camera", highQualityConstraints);
-        const stream = await originalGetUserMedia(highQualityConstraints);
-        logCameraSettings(stream, highQualityConstraints);
-        return stream;
-      };
-
-      try {
-        await instance.start();
-      } finally {
-        mediaDevices.getUserMedia = originalGetUserMedia;
-      }
-    }
-
     const mindarThree = new MindARThree({
-      container,
-      imageTargetSrc: "./ar/targets.mind",
-      maxTrack: 1
+      container: document.querySelector("#container"),
+      imageTargetSrc: "./ar/targets.mind"
     });
 
     const { renderer, scene, camera } = mindarThree;
     const anchor = mindarThree.addAnchor(0);
 
     anchor.onTargetFound = () => {
-      console.log("TARGET FOUND");
-      const notice = document.createElement("div");
-      notice.textContent = "TARGET FOUND";
-      notice.style.cssText = "position:fixed;left:12px;top:12px;z-index:9999;padding:10px 12px;background:red;color:white;font:700 16px system-ui;border-radius:8px;";
-      notice.id = "target-found-notice";
-      document.querySelector("#target-found-notice")?.remove();
-      document.body.appendChild(notice);
+      console.log("✅ TARGET FOUND");
+      alert("TARGET FOUND");
     };
 
     anchor.onTargetLost = () => {
       console.log("TARGET LOST");
-      document.querySelector("#target-found-notice")?.remove();
     };
 
-    const cube = new THREE.Mesh(
-      new THREE.BoxGeometry(0.3, 0.3, 0.3),
-      new THREE.MeshBasicMaterial({ color: 0xff0000 })
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1),
+      new THREE.MeshBasicMaterial({
+        color: 0xff0000,
+        transparent: true,
+        opacity: 0.8,
+        side: THREE.DoubleSide
+      })
     );
-    anchor.group.add(cube);
 
-    await startMindARWithHighQualityCamera(mindarThree);
-    renderer.setAnimationLoop(() => {
-      renderer.render(scene, camera);
+    anchor.group.add(plane);
+
+    document.querySelector("#startButton").addEventListener("click", async () => {
+      console.log("Starting MindAR...");
+      await mindarThree.start();
+      console.log("MindAR started");
+
+      renderer.setAnimationLoop(() => {
+        renderer.render(scene, camera);
+      });
+    });
+
+    document.querySelector("#stopButton").addEventListener("click", () => {
+      mindarThree.stop();
+      renderer.setAnimationLoop(null);
     });
   </script>
 </body>
