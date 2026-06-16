@@ -176,6 +176,19 @@
             <li>更新主 AR 快取版本至 <code>20260616-ar7</code>。</li>
           </ul>
         </article>
+        <article>
+          <div class="version-head">
+            <h2>v0.1a1-8</h2>
+            <time datetime="2026-06-16">2026 06/16</time>
+          </div>
+          <ul>
+            <li>依已驗證可用的 <code>ar-basic.html</code>，將主 AR 頁改為 module 載入後即建立 <code>MindARThree</code>、<code>addAnchor(0)</code> 與 AR 物件。</li>
+            <li>主 AR 頁按下開始後改為直接呼叫 <code>await mindarThree.start()</code>，並使用 <code>renderer.setAnimationLoop()</code> 渲染，對齊 <code>ar-basic.html</code> 的啟動流程。</li>
+            <li>暫時移除主 AR 啟動流程中的 target fetch 檢查、高畫質相機 wrapper、重新建立 renderer/container 等差異點。</li>
+            <li>將主頁 import map 的 Three.js 來源改為與 <code>ar-basic.html</code> 相同的 <code>unpkg.com</code>。</li>
+            <li>更新主 AR 快取版本至 <code>20260616-ar8</code>。</li>
+          </ul>
+        </article>
       </section>
     </main>
   </body>

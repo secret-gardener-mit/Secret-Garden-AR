@@ -45,6 +45,9 @@ const debugCounter = document.querySelector("#debug-counter");
 
 let mindarThree = null;
 let anchor = null;
+let renderer = null;
+let scene = null;
+let camera = null;
 let petals = [];
 let flowers = [];
 let animationId = null;
@@ -535,6 +538,20 @@ function renderLoop(time) {
   animationId = requestAnimationFrame(renderLoop);
 }
 
+function initializeMindAR() {
+  logEvent("creating MindARThree with ar-basic flow");
+  mindarThree = new MindARThree({
+    container,
+    imageTargetSrc: TARGET_SRC,
+  });
+
+  ({ renderer, scene, camera } = mindarThree);
+  anchor = mindarThree.addAnchor(0);
+  anchor.onTargetFound = () => setTrackingState(true);
+  anchor.onTargetLost = () => setTrackingState(false);
+  buildScene();
+}
+
 async function startAR() {
   if (running) return;
 
@@ -543,68 +560,27 @@ async function startAR() {
   updateFoundCounter();
   debugLog.replaceChildren();
   logEvent("start button pressed");
-  setStatus("正在檢查定位圖卡檔案...");
+  setStatus("正在啟動 AR...");
 
   try {
-    ensureCameraSupport();
-    logEvent("secure context and camera API available");
-  } catch (error) {
-    startButton.disabled = false;
-    logEvent(getErrorMessage(error));
-    setStatus(getErrorMessage(error));
-    return;
-  }
-
-  const targetFile = await checkTargetFile();
-  if (!targetFile.ok) {
-    startButton.disabled = false;
-    logEvent(targetFile.message);
-    setStatus(targetFile.message);
-    return;
-  }
-
-  try {
-    setStatus(`定位圖卡已讀取（${Math.round(targetFile.size / 1024)} KB），正在啟動 AR...`);
-    logEvent("camera preflight skipped; MindAR will request camera");
-
-    logEvent("creating MindARThree");
-    mindarThree = new MindARThree({
-      container,
-      imageTargetSrc: TARGET_SRC,
-      maxTrack: 1
-    });
-
-    const { renderer } = mindarThree;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.7));
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-    anchor = mindarThree.addAnchor(0);
-    anchor.onTargetFound = () => setTrackingState(true);
-    anchor.onTargetLost = () => setTrackingState(false);
-
-    buildScene();
-    logEvent("starting MindAR engine");
-    await startMindARWithHighQualityCamera(mindarThree);
+    logEvent("Starting MindAR...");
+    await mindarThree.start();
+    logEvent("MindAR started");
 
     setRunningState(true);
-    setTrackingState(false);
     setStatus("AR 已啟動。請對準秘密花園圖卡。");
     logEvent("MindAR started; waiting for target found");
     scheduleScanReminder();
-    animationId = requestAnimationFrame(renderLoop);
+    renderer.setAnimationLoop((time) => {
+      if (tracking) {
+        updatePetals(time);
+        updateFlowers(time);
+      }
+      renderer.render(scene, camera);
+    });
   } catch (error) {
     console.error(error);
     logEvent(getErrorMessage(error));
-    if (mindarThree) {
-      try {
-        await mindarThree.stop();
-      } catch (stopError) {
-        console.warn(stopError);
-      }
-    }
-    container.replaceChildren();
-    mindarThree = null;
-    anchor = null;
     setRunningState(false);
     setTrackingState(false);
     setStatus(getErrorMessage(error));
@@ -615,7 +591,7 @@ async function startAR() {
 
 async function stopAR() {
   logEvent("stop requested");
-  if (!mindarThree) {
+  if (!mindarThree || !running) {
     setRunningState(false);
     return;
   }
@@ -626,11 +602,8 @@ async function stopAR() {
   }
   clearScanReminder();
 
-  await mindarThree.stop();
-  mindarThree.renderer.setAnimationLoop(null);
-  container.replaceChildren();
-  mindarThree = null;
-  anchor = null;
+  mindarThree.stop();
+  renderer.setAnimationLoop(null);
   setRunningState(false);
   setTrackingState(false);
   setStatus("AR 已停止。可再次點擊開始。");
@@ -648,3 +621,4 @@ window.addEventListener("pagehide", stopAR);
 warnIfInsecure();
 updateFoundCounter();
 logEvent("page loaded");
+initializeMindAR();
