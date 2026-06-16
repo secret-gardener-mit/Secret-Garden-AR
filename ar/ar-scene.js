@@ -6,6 +6,11 @@ const PETAL_COUNT = 80;
 const FLOWER_COUNT = 24;
 const PETAL_FALL_SPEED = 0.01;
 const FLOWER_GROW_SPEED = 0.012;
+const CAMERA_VIDEO_QUALITY = {
+  width: { ideal: 1920 },
+  height: { ideal: 1080 },
+  frameRate: { ideal: 30 },
+};
 
 // 場景範圍與顏色也集中在這裡，之後調整現場位置會比較快。
 const TARGET_SRC = "./ar/targets.mind";
@@ -183,6 +188,61 @@ async function requestCameraAccess() {
 
   for (const track of stream.getTracks()) {
     track.stop();
+  }
+}
+
+function buildHighQualityCameraConstraints(constraints = {}) {
+  const nextConstraints = { ...constraints, audio: false };
+  const originalVideo = typeof constraints.video === "object" ? constraints.video : {};
+  const nextVideo = {
+    ...originalVideo,
+    ...CAMERA_VIDEO_QUALITY,
+  };
+
+  if (!nextVideo.deviceId && !nextVideo.facingMode) {
+    nextVideo.facingMode = { ideal: "environment" };
+  }
+
+  nextConstraints.video = nextVideo;
+  return nextConstraints;
+}
+
+function logCameraSettings(stream, requestedConstraints) {
+  const [track] = stream.getVideoTracks();
+  if (!track) {
+    logEvent("camera stream opened, but no video track found");
+    return;
+  }
+
+  const settings = track.getSettings ? track.getSettings() : {};
+  const width = settings.width || "unknown";
+  const height = settings.height || "unknown";
+  const frameRate = settings.frameRate || "unknown";
+  const facingMode = settings.facingMode || "unknown";
+  const deviceId = settings.deviceId ? `${settings.deviceId.slice(0, 8)}...` : "unknown";
+
+  window.SECRET_GARDEN_LAST_CAMERA_SETTINGS = settings;
+  console.log("[SecretGardenAR] requested camera constraints", requestedConstraints);
+  console.log("[SecretGardenAR] actual camera settings", settings);
+  logEvent(`camera actual: ${width}x${height} @ ${frameRate}fps, facing=${facingMode}, device=${deviceId}`);
+}
+
+async function startMindARWithHighQualityCamera(instance) {
+  const mediaDevices = navigator.mediaDevices;
+  const originalGetUserMedia = mediaDevices.getUserMedia.bind(mediaDevices);
+
+  mediaDevices.getUserMedia = async (constraints) => {
+    const highQualityConstraints = buildHighQualityCameraConstraints(constraints);
+    logEvent(`requesting camera ideal ${CAMERA_VIDEO_QUALITY.width.ideal}x${CAMERA_VIDEO_QUALITY.height.ideal}`);
+    const stream = await originalGetUserMedia(highQualityConstraints);
+    logCameraSettings(stream, highQualityConstraints);
+    return stream;
+  };
+
+  try {
+    await instance.start();
+  } finally {
+    mediaDevices.getUserMedia = originalGetUserMedia;
   }
 }
 
@@ -524,7 +584,7 @@ async function startAR() {
 
     buildScene();
     logEvent("starting MindAR engine");
-    await mindarThree.start();
+    await startMindARWithHighQualityCamera(mindarThree);
 
     setRunningState(true);
     setTrackingState(false);

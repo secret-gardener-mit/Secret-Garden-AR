@@ -163,6 +163,19 @@
             <li>更新 <code>ar/ar-scene.js</code> 快取版本至 <code>20260615-ar6</code>。</li>
           </ul>
         </article>
+        <article>
+          <div class="version-head">
+            <h2>v0.1a1-7</h2>
+            <time datetime="2026-06-16">2026 06/16</time>
+          </div>
+          <ul>
+            <li>確認 MindAR 1.2.5 的 <code>MindARThree</code> 沒有直接暴露 <code>videoSettings</code>，內部預設只要求 <code>facingMode: "environment"</code>。</li>
+            <li>新增高畫質相機 wrapper，於 MindAR 啟動時把 <code>getUserMedia</code> video constraints 合併為 <code>1920x1080</code>、<code>30fps</code> 的 ideal 請求。</li>
+            <li>新增實際相機設定 log：主 AR 頁會在 debug log 與 console 顯示實際取得的 <code>width</code>、<code>height</code>、<code>frameRate</code>、<code>facingMode</code>。</li>
+            <li><code>ar-test.html</code> 也同步加入相機解析度 log，並在畫面底部顯示目前取得的相機解析度。</li>
+            <li>更新主 AR 快取版本至 <code>20260616-ar7</code>。</li>
+          </ul>
+        </article>
       </section>
     </main>
   </body>

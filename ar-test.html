@@ -31,6 +31,63 @@
     import { MindARThree } from "mindar-image-three";
 
     const container = document.querySelector("#container");
+    const CAMERA_VIDEO_QUALITY = {
+      width: { ideal: 1920 },
+      height: { ideal: 1080 },
+      frameRate: { ideal: 30 }
+    };
+
+    function buildHighQualityCameraConstraints(constraints = {}) {
+      const nextConstraints = { ...constraints, audio: false };
+      const originalVideo = typeof constraints.video === "object" ? constraints.video : {};
+      const nextVideo = {
+        ...originalVideo,
+        ...CAMERA_VIDEO_QUALITY
+      };
+
+      if (!nextVideo.deviceId && !nextVideo.facingMode) {
+        nextVideo.facingMode = { ideal: "environment" };
+      }
+
+      nextConstraints.video = nextVideo;
+      return nextConstraints;
+    }
+
+    function logCameraSettings(stream, requestedConstraints) {
+      const [track] = stream.getVideoTracks();
+      const settings = track?.getSettings ? track.getSettings() : {};
+      window.SECRET_GARDEN_LAST_CAMERA_SETTINGS = settings;
+      console.log("[SecretGardenAR-Test] requested camera constraints", requestedConstraints);
+      console.log("[SecretGardenAR-Test] actual camera settings", settings);
+
+      const label = `${settings.width || "unknown"}x${settings.height || "unknown"} @ ${settings.frameRate || "unknown"}fps`;
+      const notice = document.createElement("div");
+      notice.textContent = `Camera: ${label}`;
+      notice.style.cssText = "position:fixed;left:12px;bottom:12px;z-index:9999;padding:10px 12px;background:rgba(0,0,0,.72);color:white;font:700 14px system-ui;border-radius:8px;";
+      notice.id = "camera-settings-notice";
+      document.querySelector("#camera-settings-notice")?.remove();
+      document.body.appendChild(notice);
+    }
+
+    async function startMindARWithHighQualityCamera(instance) {
+      const mediaDevices = navigator.mediaDevices;
+      const originalGetUserMedia = mediaDevices.getUserMedia.bind(mediaDevices);
+
+      mediaDevices.getUserMedia = async (constraints) => {
+        const highQualityConstraints = buildHighQualityCameraConstraints(constraints);
+        console.log("[SecretGardenAR-Test] requesting high quality camera", highQualityConstraints);
+        const stream = await originalGetUserMedia(highQualityConstraints);
+        logCameraSettings(stream, highQualityConstraints);
+        return stream;
+      };
+
+      try {
+        await instance.start();
+      } finally {
+        mediaDevices.getUserMedia = originalGetUserMedia;
+      }
+    }
+
     const mindarThree = new MindARThree({
       container,
       imageTargetSrc: "./ar/targets.mind",
@@ -61,7 +118,7 @@
     );
     anchor.group.add(cube);
 
-    await mindarThree.start();
+    await startMindARWithHighQualityCamera(mindarThree);
     renderer.setAnimationLoop(() => {
       renderer.render(scene, camera);
     });
