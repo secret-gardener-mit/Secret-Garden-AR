@@ -1,12 +1,14 @@
 import * as THREE from "three";
 
-// Secret Garden XR v0.1a2
+// Secret Garden XR v0.1a2-1
 // 調整參數集中在這裡，後續可以直接修改數量、高度、半徑與動畫時間。
 const FLOWER_COUNT = 5;
 const PETAL_COUNT = 100;
 const FLOWER_RADIUS = 1.5;
 const PETAL_HEIGHT = 2.5;
 const FLOWER_GROW_DURATION = 1000;
+const FALLBACK_GARDEN_Y = -0.85;
+const FALLBACK_LOOK_AT_Z = -2.1;
 
 const FLOWER_COLORS = ["#f8bfd4", "#ffd7a8", "#fff1a8", "#bde5bd", "#c9d7ff", "#d7c2ff"];
 const PETAL_COLORS = ["#ffd7e6", "#fff1c7", "#f7bfd4", "#dceecb", "#f5efe8"];
@@ -36,6 +38,11 @@ let fallbackGardenPlaced = false;
 let flowers = [];
 let petals = [];
 const tapPosition = new THREE.Vector2();
+const raycaster = new THREE.Raycaster();
+const fallbackGroundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -FALLBACK_GARDEN_Y);
+const fallbackHitPoint = new THREE.Vector3();
+const xrHitMatrix = new THREE.Matrix4();
+const xrHitWorldPosition = new THREE.Vector3();
 
 init();
 
@@ -135,12 +142,13 @@ async function startIPhoneFallback() {
   }
 
   camera.position.set(0, 1.25, 3);
-  camera.lookAt(0, 0, 0);
+  camera.lookAt(0, FALLBACK_GARDEN_Y, FALLBACK_LOOK_AT_Z);
+  camera.updateMatrixWorld(true);
   renderer.setAnimationLoop(renderFallback);
 }
 
 function renderWebXR(timestamp, frame) {
-  if (frame && hitTestSource && !gardenRoot) {
+  if (frame && hitTestSource) {
     const hitTestResults = frame.getHitTestResults(hitTestSource);
     if (hitTestResults.length > 0) {
       const hit = hitTestResults[0];
@@ -149,7 +157,7 @@ function renderWebXR(timestamp, frame) {
         planeFound = true;
         reticle.visible = true;
         reticle.matrix.fromArray(pose.transform.matrix);
-        setHint("Tap to place garden");
+        setHint(gardenRoot ? "Tap floor to plant flower" : "Tap to place garden");
       }
     } else {
       reticle.visible = false;
@@ -169,24 +177,35 @@ function renderFallback(timestamp) {
 
 function placeFromXRSelect() {
   if (!planeFound || !reticle.visible) return;
-  placeGarden(reticle.matrix);
+
+  if (!gardenRoot) {
+    placeGarden(reticle.matrix);
+    return;
+  }
+
+  xrHitMatrix.copy(reticle.matrix);
+  xrHitWorldPosition.setFromMatrixPosition(xrHitMatrix);
+  addFlowerAtWorldPosition(xrHitWorldPosition);
 }
 
 function handleTap(event) {
   if (!fallbackMode) return;
 
-  tapPosition.x = (event.clientX / window.innerWidth) * 2 - 1;
-  tapPosition.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-  if (!fallbackGardenPlaced) {
-    const matrix = new THREE.Matrix4().makeTranslation(0, -0.75, -1.9);
-    placeGarden(matrix);
-    fallbackGardenPlaced = true;
+  const worldPosition = getFallbackGroundHit(event.clientX, event.clientY);
+  if (!worldPosition) {
+    setStatus("沒有打到預設地板平面，請稍微往下點擊畫面。");
     return;
   }
 
-  const worldPosition = fallbackTapToGardenPosition(tapPosition);
-  addFlower(worldPosition);
+  if (!fallbackGardenPlaced) {
+    const matrix = new THREE.Matrix4().makeTranslation(worldPosition.x, FALLBACK_GARDEN_Y, worldPosition.z);
+    placeGarden(matrix);
+    fallbackGardenPlaced = true;
+    setStatus("花園已固定在同一個世界座標平面。");
+    return;
+  }
+
+  addFlowerAtWorldPosition(worldPosition);
 }
 
 function placeGarden(matrix) {
@@ -226,6 +245,14 @@ function addFlower(position) {
   gardenRoot.add(flower);
   flowers.push(flower);
   updateDebug();
+}
+
+function addFlowerAtWorldPosition(worldPosition) {
+  if (!gardenRoot) return;
+
+  const localPosition = gardenRoot.worldToLocal(worldPosition.clone());
+  localPosition.y = 0;
+  addFlower(localPosition);
 }
 
 function createFlower(color) {
@@ -343,8 +370,13 @@ function updatePetals(time) {
   }
 }
 
-function fallbackTapToGardenPosition(normalizedPosition) {
-  return new THREE.Vector3(normalizedPosition.x * FLOWER_RADIUS, 0, normalizedPosition.y * FLOWER_RADIUS);
+function getFallbackGroundHit(clientX, clientY) {
+  tapPosition.x = (clientX / window.innerWidth) * 2 - 1;
+  tapPosition.y = -(clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(tapPosition, camera);
+
+  const didHit = raycaster.ray.intersectPlane(fallbackGroundPlane, fallbackHitPoint);
+  return didHit ? fallbackHitPoint.clone() : null;
 }
 
 function createReticle() {

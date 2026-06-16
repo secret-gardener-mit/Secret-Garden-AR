@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f4efe2" />
+    <title>XR 版本日誌｜秘密花園</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --paper: #fbf7ed;
+        --ink: #24311e;
+        --muted: #69745f;
+        --leaf: #6f9f68;
+        --rose: #d9869d;
+        --line: rgba(36, 49, 30, 0.14);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: "Noto Serif TC", "PingFang TC", "Microsoft JhengHei", serif;
+      }
+      main { width: min(920px, calc(100% - 32px)); margin: 0 auto; padding: 42px 0 58px; }
+      .top-links { display: flex; flex-wrap: wrap; gap: 10px; }
+      .top-link {
+        display: inline-flex;
+        align-items: center;
+        min-height: 42px;
+        padding: 0 16px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.62);
+        color: var(--ink);
+        text-decoration: none;
+      }
+      header { padding: 56px 0 34px; }
+      .eyebrow {
+        margin: 0 0 12px;
+        color: var(--leaf);
+        font-family: Inter, system-ui, sans-serif;
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      h1 { margin: 0; font-size: clamp(2.35rem, 9vw, 5rem); line-height: 0.96; letter-spacing: 0; }
+      header p { max-width: 43rem; margin: 18px 0 0; color: var(--muted); line-height: 1.8; }
+      .timeline { display: grid; gap: 16px; }
+      article {
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.72);
+        box-shadow: 0 18px 50px rgba(66, 75, 55, 0.09);
+      }
+      .version-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+      h2 { margin: 0; color: var(--rose); font-size: 1.38rem; }
+      time { color: var(--muted); font-family: Inter, system-ui, sans-serif; font-size: 0.9rem; }
+      ul { margin: 16px 0 0; padding-left: 1.2rem; color: #384330; line-height: 1.85; }
+      code { padding: 0.12em 0.34em; border-radius: 6px; background: rgba(111, 159, 104, 0.14); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
+      @media (max-width: 620px) {
+        main { width: min(100% - 24px, 920px); padding-top: 22px; }
+        header { padding-top: 42px; }
+        .version-head { display: grid; gap: 5px; }
+        article { padding: 18px; border-radius: 16px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <nav class="top-links" aria-label="XR pages">
+        <a class="top-link" href="ar-webxr.html">回到 XR 開花體驗</a>
+        <a class="top-link" href="version.html">主要版本紀錄</a>
+      </nav>
+      <header>
+        <p class="eyebrow">XR Changelog</p>
+        <h1>版本日誌</h1>
+        <p>這裡詳細記錄每次修改訊息對應的子版本。除非指定更換版本號，後續修改會繼續以 <code>v0.1a2-X</code> 往下增加。</p>
+      </header>
+      <section class="timeline" aria-label="XR 子版本日誌">
+        <article>
+          <div class="version-head">
+            <h2>v0.1a2</h2>
+            <time datetime="2026-06-16">2026 06/16</time>
+          </div>
+          <ul>
+            <li>建立 <code>ar-webxr.html</code> 與 <code>ar/webxr-scene.js</code>，使用 WebXR + Three.js 製作第一版秘密花園 XR 開花體驗。</li>
+            <li>加入地板 hit-test、初始 5 朵花、點擊種花、100 片花瓣雨與 debug 面板。</li>
+            <li>保留 <code>loadGLB()</code> 位置，方便後續替換為 <code>flower.glb</code> 模型。</li>
+            <li>針對 iPhone Safari 加入相機背景 fallback。</li>
+          </ul>
+        </article>
+        <article>
+          <div class="version-head">
+            <h2>v0.1a2-1</h2>
+            <time datetime="2026-06-16">2026 06/16</time>
+          </div>
+          <ul>
+            <li>修正 WebXR 模式放置花園後停止 hit-test 的問題，讓後續點擊仍能取得地板交點。</li>
+            <li>WebXR 後續點擊會將 reticle 的世界座標轉成 <code>gardenRoot</code> local 座標，再於實際點擊位置生成花朵。</li>
+            <li>iPhone fallback 改用 Three.js <code>Raycaster</code> 與固定水平地板平面計算點擊位置，取代原本的螢幕比例換算。</li>
+            <li>更新頁面顯示與快取參數為 <code>v0.1a2-1</code>。</li>
+          </ul>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

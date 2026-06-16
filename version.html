@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f4efe2" />
+    <title>XR Version｜秘密花園</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --paper: #fbf7ed;
+        --ink: #24311e;
+        --muted: #69745f;
+        --leaf: #6f9f68;
+        --rose: #d9869d;
+        --line: rgba(36, 49, 30, 0.14);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: "Noto Serif TC", "PingFang TC", "Microsoft JhengHei", serif;
+      }
+      main { width: min(920px, calc(100% - 32px)); margin: 0 auto; padding: 42px 0 58px; }
+      .top-links { display: flex; flex-wrap: wrap; gap: 10px; }
+      .top-link {
+        display: inline-flex;
+        align-items: center;
+        min-height: 42px;
+        padding: 0 16px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.62);
+        color: var(--ink);
+        text-decoration: none;
+      }
+      header { padding: 56px 0 34px; }
+      .eyebrow {
+        margin: 0 0 12px;
+        color: var(--leaf);
+        font-family: Inter, system-ui, sans-serif;
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      h1 { margin: 0; font-size: clamp(2.35rem, 9vw, 5rem); line-height: 0.96; letter-spacing: 0; }
+      header p { max-width: 43rem; margin: 18px 0 0; color: var(--muted); line-height: 1.8; }
+      .timeline { display: grid; gap: 16px; }
+      article {
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.72);
+        box-shadow: 0 18px 50px rgba(66, 75, 55, 0.09);
+      }
+      .version-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+      h2 { margin: 0; color: var(--rose); font-size: 1.38rem; }
+      time { color: var(--muted); font-family: Inter, system-ui, sans-serif; font-size: 0.9rem; }
+      ul { margin: 16px 0 0; padding-left: 1.2rem; color: #384330; line-height: 1.85; }
+      code { padding: 0.12em 0.34em; border-radius: 6px; background: rgba(111, 159, 104, 0.14); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
+      @media (max-width: 620px) {
+        main { width: min(100% - 24px, 920px); padding-top: 22px; }
+        header { padding-top: 42px; }
+        .version-head { display: grid; gap: 5px; }
+        article { padding: 18px; border-radius: 16px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <nav class="top-links" aria-label="XR pages">
+        <a class="top-link" href="ar-webxr.html">回到 XR 開花體驗</a>
+        <a class="top-link" href="版本日誌.html">查看子版本日誌</a>
+      </nav>
+      <header>
+        <p class="eyebrow">XR Version</p>
+        <h1>版本紀錄</h1>
+        <p>這裡只記錄主要版本。子版本細節請看「版本日誌」。</p>
+      </header>
+      <section class="timeline" aria-label="XR 版本紀錄">
+        <article>
+          <div class="version-head">
+            <h2>v0.1a2</h2>
+            <time datetime="2026-06-16">2026 06/16</time>
+          </div>
+          <ul>
+            <li>棄用 MindAR image target 流程，改建立 WebXR + Three.js 的秘密花園 XR 開花體驗。</li>
+            <li>加入 WebXR hit-test 地板放置、初始花園、點擊種花、花瓣雨與 debug 資訊。</li>
+            <li>針對 iPhone Safari 不支援 WebXR AR session 的限制，加入相機背景 fallback。</li>
+            <li>修正 <code>v0.1a2-1</code>：WebXR 持續追蹤地板 hit-test，fallback 點擊改用固定地板平面射線，讓花朵位置更穩定。</li>
+          </ul>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
