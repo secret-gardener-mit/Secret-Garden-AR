@@ -202,6 +202,18 @@
             <li>更新主 AR 快取版本至 <code>20260616-ar9</code>。</li>
           </ul>
         </article>
+        <article>
+          <div class="version-head">
+            <h2>v0.1a1-10</h2>
+            <time datetime="2026-06-16">2026 06/16</time>
+          </div>
+          <ul>
+            <li>新增 <code>ar-red-basic.html</code>，完全沿用已確認可掃描的 <code>ar-basic.html</code> 啟動流程，只將 <code>imageTargetSrc</code> 改為 <code>./ar/Red.mind</code>。</li>
+            <li><code>ar-red-basic.html</code> 加入畫面上的 Red target 狀態文字，掃描成功會顯示 <code>RED TARGET FOUND</code>。</li>
+            <li>主 AR 快取版本更新至 <code>20260616-ar10</code>，方便排除手機快取。</li>
+            <li>排查結論規則：若 <code>ar-basic.html</code> 可掃、但 <code>ar-red-basic.html</code> 掃不到，問題會在 <code>Red.mind</code> 或 Red 圖卡本身，而不是主 AR 介面。</li>
+          </ul>
+        </article>
       </section>
     </main>
   </body>
