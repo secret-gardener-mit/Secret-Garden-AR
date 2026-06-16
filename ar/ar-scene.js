@@ -13,7 +13,9 @@ const CAMERA_VIDEO_QUALITY = {
 };
 
 // 場景範圍與顏色也集中在這裡，之後調整現場位置會比較快。
-const TARGET_SRC = "./ar/targets.mind";
+const TARGET_SRC = "./ar/Red.mind";
+const RED_BLOOM_AUDIO_SRC = "./ar/assets/red_bloom.mp3";
+const RED_BLOOM_COLOR = "#e94545";
 const PETAL_COLORS = ["#ffd7e6", "#fff1c7", "#f7bfd4", "#dceecb", "#f5efe8"];
 const FLOWER_COLORS = ["#f8bfd4", "#ffd7a8", "#fff1a8", "#bde5bd", "#c9d7ff", "#d7c2ff"];
 const LEAF_COLOR = "#8fbf89";
@@ -48,6 +50,9 @@ let anchor = null;
 let renderer = null;
 let scene = null;
 let camera = null;
+let redBloom = null;
+let redBloomStartedAt = 0;
+let redBloomAudio = null;
 let petals = [];
 let flowers = [];
 let animationId = null;
@@ -105,14 +110,15 @@ function setTrackingState(nextTracking) {
     foundCount += 1;
     updateFoundCounter();
     clearScanReminder();
-    logEvent(`TARGET FOUND #${foundCount} - red square should be visible`, "found");
-    setStatus(TARGET_FOUND_MESSAGE);
+    logEvent(`RED TARGET FOUND #${foundCount} - red bloom triggered`, "found");
+    triggerRedBloom();
+    setStatus("已辨識 Red 圖卡。紅色花朵正在綻放。");
   } else if (running) {
     logEvent("target lost / scanning");
   }
   scanHint.textContent = nextTracking
-    ? "已偵測到目標圖片。紅色方塊應出現在圖卡位置，接著花瓣與花朵會開始動畫。"
-    : "請對準秘密花園圖卡。辨識成功後，花瓣會在鋼琴上方落下，花朵會從周圍慢慢長出。";
+    ? "已偵測到 Red 圖卡。紅色花朵正在圖卡位置綻放。"
+    : "請對準 Red 圖卡。辨識成功後，紅色花朵會綻放並播放音效。";
 }
 
 function clearScanReminder() {
@@ -466,12 +472,138 @@ function createDebugRedSquare() {
   return group;
 }
 
+function createRedBloomFlower() {
+  const group = new THREE.Group();
+  const stemHeight = 0.42;
+  const headY = 0.12;
+  const petalCount = 8;
+  const petalRadius = 0.115;
+  const petalDistance = 0.11;
+
+  const stem = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.013, 0.02, stemHeight, 12),
+    new THREE.MeshBasicMaterial({ color: "#6f9f68" })
+  );
+  stem.position.set(0, -0.26, 0.055);
+  stem.scale.y = 0.001;
+  group.add(stem);
+
+  const head = new THREE.Group();
+  head.position.set(0, headY, 0.075);
+  group.add(head);
+
+  const bloomPetals = [];
+  for (let i = 0; i < petalCount; i += 1) {
+    const angle = (i / petalCount) * Math.PI * 2;
+    const petal = new THREE.Mesh(
+      new THREE.CircleGeometry(petalRadius, 24),
+      new THREE.MeshBasicMaterial({
+        color: RED_BLOOM_COLOR,
+        transparent: true,
+        opacity: 0.94,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      })
+    );
+    petal.scale.set(0.001, 0.001, 0.001);
+    petal.position.set(Math.cos(angle) * 0.025, Math.sin(angle) * 0.025, 0);
+    petal.rotation.z = angle;
+    petal.userData = {
+      angle,
+      finalX: Math.cos(angle) * petalDistance,
+      finalY: Math.sin(angle) * petalDistance,
+      finalScaleX: 0.58,
+      finalScaleY: 1,
+    };
+    bloomPetals.push(petal);
+    head.add(petal);
+  }
+
+  const core = new THREE.Mesh(
+    new THREE.CircleGeometry(0.055, 24),
+    new THREE.MeshBasicMaterial({
+      color: "#ffe7a6",
+      transparent: true,
+      opacity: 0.98,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    })
+  );
+  core.scale.setScalar(0.001);
+  core.position.z = 0.012;
+  head.add(core);
+
+  group.position.set(0, -0.02, 0.16);
+  group.scale.setScalar(1.18);
+  group.userData = { stem, petals: bloomPetals, core, active: false };
+  return group;
+}
+
+function easeOutCubic(value) {
+  return 1 - Math.pow(1 - value, 3);
+}
+
+function resetRedBloom() {
+  if (!redBloom) return;
+  const { stem, petals: bloomPetals, core } = redBloom.userData;
+  redBloom.userData.active = false;
+  redBloomStartedAt = 0;
+  stem.scale.y = 0.001;
+  bloomPetals.forEach((petal) => {
+    petal.scale.set(0.001, 0.001, 0.001);
+    petal.position.set(Math.cos(petal.userData.angle) * 0.025, Math.sin(petal.userData.angle) * 0.025, 0);
+  });
+  core.scale.setScalar(0.001);
+}
+
+function triggerRedBloom() {
+  resetRedBloom();
+  redBloom.userData.active = true;
+  redBloomStartedAt = performance.now();
+  playRedBloomAudio();
+}
+
+function updateRedBloom(time) {
+  if (!redBloom?.userData.active || !redBloomStartedAt) return;
+
+  const elapsed = time - redBloomStartedAt;
+  const { stem, petals: bloomPetals, core } = redBloom.userData;
+  const stemProgress = easeOutCubic(Math.min(1, elapsed / 1120));
+  stem.scale.y = Math.max(0.001, stemProgress);
+  stem.position.y = -0.47 + stemProgress * 0.21;
+
+  bloomPetals.forEach((petal, index) => {
+    const petalProgress = easeOutCubic(Math.min(1, Math.max(0, (elapsed - 200 - index * 60) / 1450)));
+    const { finalX, finalY, finalScaleX, finalScaleY } = petal.userData;
+    petal.position.x = finalX * petalProgress;
+    petal.position.y = finalY * petalProgress;
+    petal.scale.set(Math.max(0.001, finalScaleX * petalProgress), Math.max(0.001, finalScaleY * petalProgress), 1);
+  });
+
+  const coreProgress = easeOutCubic(Math.min(1, Math.max(0, (elapsed - 880) / 650)));
+  core.scale.setScalar(Math.max(0.001, coreProgress));
+}
+
+function playRedBloomAudio() {
+  if (!redBloomAudio) return;
+  redBloomAudio.pause();
+  redBloomAudio.currentTime = 0;
+  redBloomAudio.volume = 1;
+  redBloomAudio.play().then(() => {
+    logEvent("red bloom audio playing");
+  }).catch((error) => {
+    logEvent(`red bloom audio blocked: ${error?.message || error}`);
+  });
+}
+
 function buildScene() {
   anchor.group.clear();
   petals = [];
   flowers = [];
 
-  anchor.group.add(createDebugRedSquare());
+  redBloom = createRedBloomFlower();
+  resetRedBloom();
+  anchor.group.add(redBloom);
 
   const content = new THREE.Group();
   content.position.z = CONTENT_Z_OFFSET;
@@ -494,7 +626,7 @@ function buildScene() {
   content.add(ambientLight);
 
   anchor.group.add(content);
-  logEvent(`scene built: ${PETAL_COUNT} petals, ${FLOWER_COUNT} flowers, red square attached`);
+  logEvent(`scene built: ${PETAL_COUNT} petals, ${FLOWER_COUNT} flowers, red bloom attached`);
 }
 
 function updatePetals(time) {
@@ -525,6 +657,14 @@ function updateFlowers(time) {
   }
 }
 
+function updateBloomAnimations(time) {
+  updateRedBloom(time);
+  if (tracking) {
+    updatePetals(time);
+    updateFlowers(time);
+  }
+}
+
 function renderLoop(time) {
   if (!mindarThree || !running) return;
 
@@ -540,6 +680,8 @@ function renderLoop(time) {
 
 function initializeMindAR() {
   logEvent("creating MindARThree with ar-basic flow");
+  redBloomAudio = new Audio(RED_BLOOM_AUDIO_SRC);
+  redBloomAudio.preload = "auto";
   mindarThree = new MindARThree({
     container,
     imageTargetSrc: TARGET_SRC,
@@ -572,10 +714,7 @@ async function startAR() {
     logEvent("MindAR started; waiting for target found");
     scheduleScanReminder();
     renderer.setAnimationLoop((time) => {
-      if (tracking) {
-        updatePetals(time);
-        updateFlowers(time);
-      }
+      updateBloomAnimations(time);
       renderer.render(scene, camera);
     });
   } catch (error) {
