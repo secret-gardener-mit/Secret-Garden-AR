@@ -104,6 +104,20 @@
             <li>更新頁面顯示與快取參數為 <code>v0.1a2-1</code>。</li>
           </ul>
         </article>
+        <article>
+          <div class="version-head">
+            <h2>v0.1a2-2</h2>
+            <time datetime="2026-06-16">2026 06/16</time>
+          </div>
+          <ul>
+            <li>因 iPhone Safari WebXR AR session 相容性限制，XR 內容改為 8th Wall World Tracking / SLAM 嘗試版。</li>
+            <li>新增 <code>ar-8thwall.html</code> 作為主要 8th Wall WebAR 入口，並讓 <code>index.html</code>、<code>ar-webxr.html</code>、<code>test.html</code> 指向新入口。</li>
+            <li>新增 <code>js/ar-8thwall-scene.js</code>，使用 8th Wall camera pipeline、Three.js 場景、水平面 hit-test、點擊種花與花瓣雨。</li>
+            <li>新增 debug 顯示：<code>tracking started</code>、<code>surface found</code>、<code>flowers count</code>、<code>petals count</code>。</li>
+            <li>保留 <code>loadGLB()</code> 位置，未來可替換為 <code>flower.glb</code> / <code>petal.glb</code>。</li>
+            <li>集中保留 8th Wall <code>appKey</code> 設定；未填入正式 key 時頁面會顯示提示，不會嘗試啟動 SLAM。</li>
+          </ul>
+        </article>
       </section>
     </main>
   </body>

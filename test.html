@@ -1,51 +1,11 @@
-\<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>WebXR Test</title>
-</head>
-
-<body>
-
-<h1>WebXR Test</h1>
-
-<button id="btn">
-Start AR
-</button>
-
-<div id="status"></div>
-
-<script>
-
-const status = document.getElementById("status");
-
-if (!navigator.xr) {
-  status.innerHTML = "navigator.xr 不存在";
-}
-
-document.getElementById("btn").onclick = async () => {
-
-  try {
-
-    const supported =
-      await navigator.xr.isSessionSupported("immersive-ar");
-
-    status.innerHTML =
-      "immersive-ar supported = " + supported;
-
-  } catch(e) {
-
-    console.error(e);
-
-    status.innerHTML =
-      e.message;
-
-  }
-
-};
-
-</script>
-
-</body>
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta http-equiv="refresh" content="0; url=ar-8thwall.html" />
+    <meta charset="UTF-8" />
+    <title>Secret Garden 8th Wall Test｜秘密花園</title>
+  </head>
+  <body>
+    <p><a href="ar-8thwall.html">前往 8th Wall 測試頁</a></p>
+  </body>
 </html>

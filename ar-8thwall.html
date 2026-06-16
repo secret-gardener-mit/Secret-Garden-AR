@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="8thwall:renderer" content="threejs:134" />
+    <meta name="8thwall:package" content="@8thwall.xrextras" />
+    <meta name="theme-color" content="#10170f" />
+    <title>Secret Garden 8th Wall｜秘密花園</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --cream: #fff8ed;
+        --leaf: #a8d5a2;
+        --glass: rgba(10, 15, 12, 0.74);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #0d140f;
+        color: var(--cream);
+        font-family: "Noto Serif TC", "PingFang TC", "Microsoft JhengHei", serif;
+        touch-action: none;
+        user-select: none;
+      }
+
+      #camerafeed {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .ui {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        pointer-events: none;
+        padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+      }
+
+      .top {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        gap: 12px;
+      }
+
+      .brand {
+        display: grid;
+        gap: 2px;
+        text-shadow: 0 2px 18px rgba(0, 0, 0, 0.58);
+      }
+
+      .brand strong {
+        font-size: 1rem;
+      }
+
+      .brand span {
+        color: rgba(255, 248, 237, 0.76);
+        font: 0.72rem Inter, system-ui, sans-serif;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .debug {
+        min-width: 164px;
+        padding: 10px 12px;
+        border: 1px solid rgba(255, 248, 237, 0.18);
+        border-radius: 12px;
+        background: var(--glass);
+        color: rgba(255, 248, 237, 0.9);
+        font: 0.72rem ui-monospace, SFMono-Regular, Menlo, monospace;
+        line-height: 1.55;
+        backdrop-filter: blur(14px);
+      }
+
+      .start-panel {
+        align-self: center;
+        justify-self: center;
+        width: min(88vw, 430px);
+        padding: 26px 22px 22px;
+        border: 1px solid rgba(255, 248, 237, 0.18);
+        border-radius: 22px;
+        background: linear-gradient(180deg, rgba(20, 32, 22, 0.88), rgba(14, 22, 17, 0.78));
+        text-align: center;
+        box-shadow: 0 22px 80px rgba(0, 0, 0, 0.34);
+        backdrop-filter: blur(18px);
+        pointer-events: auto;
+      }
+
+      .is-running .start-panel {
+        display: none;
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--leaf);
+        font: 700 0.74rem Inter, system-ui, sans-serif;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2.1rem, 9vw, 4.2rem);
+        line-height: 0.98;
+        letter-spacing: 0;
+      }
+
+      .start-panel p {
+        margin: 16px auto 20px;
+        max-width: 22rem;
+        color: rgba(255, 248, 237, 0.82);
+        line-height: 1.75;
+      }
+
+      .start-button {
+        width: 100%;
+        min-height: 52px;
+        border: 0;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #fff2c7, #f8bfd4 52%, #acd9b2);
+        color: #24311e;
+        font-size: 1rem;
+        font-weight: 800;
+      }
+
+      .start-button:disabled {
+        opacity: 0.62;
+      }
+
+      .status {
+        min-height: 1.5em;
+        margin-top: 14px;
+        color: rgba(255, 248, 237, 0.72);
+        font-size: 0.86rem;
+        line-height: 1.55;
+      }
+
+      .hint {
+        justify-self: center;
+        width: min(94vw, 540px);
+        padding: 12px 16px;
+        border: 1px solid rgba(255, 248, 237, 0.2);
+        border-radius: 18px;
+        background: rgba(10, 15, 12, 0.78);
+        color: rgba(255, 248, 237, 0.9);
+        text-align: center;
+        line-height: 1.6;
+        backdrop-filter: blur(16px);
+      }
+
+      .app-key-warning {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        bottom: max(78px, calc(16px + env(safe-area-inset-bottom)));
+        z-index: 12;
+        display: none;
+        max-width: 620px;
+        margin: 0 auto;
+        padding: 12px 14px;
+        border: 1px solid rgba(255, 190, 160, 0.42);
+        border-radius: 14px;
+        background: rgba(34, 18, 14, 0.82);
+        color: #ffe5d3;
+        line-height: 1.55;
+        text-align: center;
+        backdrop-filter: blur(14px);
+      }
+
+      .needs-app-key .app-key-warning {
+        display: block;
+      }
+    </style>
+  </head>
+  <body class="needs-app-key">
+    <canvas id="camerafeed"></canvas>
+
+    <main class="ui" aria-label="Secret Garden 8th Wall">
+      <header class="top">
+        <div class="brand">
+          <strong>Secret Garden</strong>
+          <span>8th Wall Bloom v0.1a2-2</span>
+        </div>
+        <div class="debug" id="debug-panel">
+          <div>Tracking Started: <span id="debug-tracking">No</span></div>
+          <div>Surface Found: <span id="debug-surface">No</span></div>
+          <div>Flowers: <span id="debug-flowers">0</span></div>
+          <div>Petals: <span id="debug-petals">0</span></div>
+        </div>
+      </header>
+
+      <section class="start-panel">
+        <p class="eyebrow">8th Wall WebAR</p>
+        <h1>秘密花園</h1>
+        <p>使用 8th Wall World Tracking 偵測地板。進入後移動手機掃描地面，花園會固定在真實空間中。</p>
+        <button class="start-button" id="start-ar" type="button">Start AR</button>
+        <div class="status" id="status">請使用 HTTPS 開啟，並確認已填入 8th Wall appKey。</div>
+      </section>
+
+      <aside class="hint" id="hint">Start AR</aside>
+    </main>
+
+    <div class="app-key-warning" id="app-key-warning">
+      尚未填入 8th Wall appKey。請在此檔案中把 YOUR_8TH_WALL_APP_KEY 換成正式 key，並在 8th Wall 後台允許部署網域。
+    </div>
+
+    <script>
+      window.SECRET_GARDEN_8THWALL_APP_KEY = "YOUR_8TH_WALL_APP_KEY";
+    </script>
+    <script src="https://unpkg.com/three@0.134.0/build/three.min.js"></script>
+    <script src="https://cdn.8thwall.com/web/xrextras/xrextras.js"></script>
+    <script src="js/ar-8thwall-scene.js?v=20260616-v0.1a2-2"></script>
+    <script>
+      (function () {
+        var appKey = window.SECRET_GARDEN_8THWALL_APP_KEY || "";
+        if (!appKey || appKey === "YOUR_8TH_WALL_APP_KEY") return;
+
+        var script = document.createElement("script");
+        script.async = true;
+        script.src = "https://apps.8thwall.com/xrweb?appKey=" + encodeURIComponent(appKey);
+        document.head.appendChild(script);
+        document.body.classList.remove("needs-app-key");
+      })();
+    </script>
+  </body>
+</html>
